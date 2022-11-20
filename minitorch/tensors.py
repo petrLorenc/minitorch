@@ -15,14 +15,14 @@ class OperationTypes(ABC):
         return self.__class__.__name__
 
     @abstractmethod
-    def derivative(self, node: Node):
+    def derivative(self, left_node: Node, right_node: Node):
         pass
 
 
 class InputNode(OperationTypes):
 
-    def derivative(self, node: Node):
-        return 0.0
+    def derivative(self, left_node: Node, right_node: Node):
+        return 0., 0.
 
     def __str__(self):
         return " << "
@@ -35,17 +35,31 @@ class AddOperation(OperationTypes):
     # if L = 4f + 5y then
     # dL/df = 4
     # together dL/dx = dL/df * df/dx (chain rule) = 4 * 2 = 8
-    def derivative(self, node: Node):
-        return 1.0
+    def derivative(self, left_node: Node, right_node: Node):
+        return 1., 1.
 
     def __str__(self):
         return " + "
 
 
+class SubtractOperation(OperationTypes):
+
+    # if f = 2x + 3y then
+    # df/dx = 2
+    # if L = 4f + 5y then
+    # dL/df = 4
+    # together dL/dx = dL/df * df/dx (chain rule) = 4 * 2 = 8
+    def derivative(self, left_node: Node, right_node: Node):
+        return 1., -1.
+
+    def __str__(self):
+        return " - "
+
+
 class ProductOperation(OperationTypes):
 
-    def derivative(self, node: Node):
-        return node.operation.value
+    def derivative(self, left_node: Node, right_node: Node):
+        return right_node.operation.value, left_node.operation.value
 
     def __str__(self):
         return " * "
@@ -70,24 +84,28 @@ class MyObject(ABC):
 
 class Node(MyObject):
 
-    def __init__(self, references: List[Node] = None, operation: OperationTypes = None):
+    def __init__(self, references: List[Node] = None, operation: OperationTypes = None, label: str = None):
         self.operation = operation
         self.references = references if references is not None else []
         self.gradient = 0.0
 
-        self._id = str(round(random.random(), 5)).split(".")[1] # just for visualisation to have better idea about REF
+        self._id = str(round(random.random(), 5)).split(".")[1] if not label else label # just for visualisation to have better idea about REF
 
     # overloading () operation
     def __call__(self, *args, **kwargs) -> float:
         return self.operation.value
 
-    # overloading + operation
+    # overloading + operator
     def __add__(self, other: Node) -> Node:
         return Node(references=[self, other], operation=AddOperation(value=self() + other()))
 
-    # overloading * operation
+    # overloading * operator
     def __mul__(self, other: Node) -> Node:
         return Node(references=[self, other], operation=ProductOperation(value=self() * other()))
+
+    # overloading - operator # from left to right A - B = int(A).__sub__(B)
+    def __sub__(self, other: Node) -> Node:
+        return Node(references=[self, other], operation=SubtractOperation(value=self() - other()))
 
     # for showing purposes
     def __repr__(self, prefix=""):
@@ -107,17 +125,21 @@ class Node(MyObject):
         self.gradient += current_derivative # need to sum it up - but then need something like zero_grad()
 
         if len(self.references) == 2:
-            self.references[0].backward(self.operation.derivative(self.references[1]) * self.gradient)
-            self.references[1].backward(self.operation.derivative(self.references[0]) * self.gradient)
+            partial_derivative_left, partial_derivative_right = self.operation.derivative(self.references[0], self.references[1])
+            self.references[0].backward(partial_derivative_left * self.gradient)
+            self.references[1].backward(partial_derivative_right * self.gradient)
         elif len(self.references) == 0:
             pass
 
 
 if __name__ == '__main__':
-    x = Node(operation=InputNode(2)) # should have grad = 3
-    y = Node(operation=InputNode(3)) # should have grad = 2
-    z = Node(operation=InputNode(4)) # should have grad = 1
-    o = (y * x) * z + (x * z)
+    x1 = Node(operation=InputNode(2), label="x1")
+    w1 = Node(operation=InputNode(3), label="w1")
+    x2 = Node(operation=InputNode(2), label="x2")
+    w2 = Node(operation=InputNode(3), label="w2")
+    b = Node(operation=InputNode(4), label="b")
+
+    o = (x1 * w1) - (x2 * w2) + b
     print(o)
     o.backward()
     print(o)

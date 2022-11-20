@@ -13,11 +13,22 @@ def test_linear_function():
 
 
 def test_complex_function():
-    x = Node(operation=InputNode(2)) # should have grad = 3
-    y = Node(operation=InputNode(3)) # should have grad = 2
-    z = Node(operation=InputNode(4)) # should have grad = 1
+    x = Node(operation=InputNode(2))
+    y = Node(operation=InputNode(3))
+    z = Node(operation=InputNode(4))
     o = (x * y) + (x * z) + (y * x) * z
     o.backward()
     assert x.gradient == 19
     assert y.gradient == 10
     assert z.gradient == 8
+
+
+def test_subtract_function():
+    x = Node(operation=InputNode(2))
+    y = Node(operation=InputNode(3))
+    z = Node(operation=InputNode(4))
+    o = (x * y) - (x * z) - (y * x) * z
+    o.backward()
+    assert x.gradient == -13.
+    assert y.gradient == -6.
+    assert z.gradient == -8.
