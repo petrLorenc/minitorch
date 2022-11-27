@@ -118,7 +118,7 @@ class Node:
     def __init__(self, references: List[Node] = None, operation: Operation = None, label: str = None):
         self.operation = operation
         self.references = references if references is not None else []
-        self.gradient = 0.0
+        self.gradient: float = 0.0
 
         self._id = str(round(random.random(), 5)).split(".")[
             1] if not label else label  # just for visualisation to have better idea about REF
@@ -167,6 +167,11 @@ class Node:
             self.references[0].backward(partial_derivative * self.gradient)
         elif len(self.references) == 0:
             pass
+
+    def zero_grad(self):
+        for node in self.references:
+            node.zero_grad()
+        self.gradient = 0.0
 
 
 if __name__ == '__main__':
